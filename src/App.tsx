@@ -12,7 +12,7 @@ type Message = {
   id: number;
   content: string;
   user_id: string | null;
-  profiles: Profile | null;
+  profiles: Profile[];
 };
 
 const MODERATOR_ID = import.meta.env.VITE_MODERATOR_USER_ID;
@@ -28,6 +28,7 @@ function App() {
 
   const isModerator = Boolean(MODERATOR_ID && user?.id === MODERATOR_ID);
 
+  // Load messages and their GitHub profiles
   async function loadMessages() {
     const { data, error } = await supabase
       .from("messages")
@@ -36,7 +37,7 @@ function App() {
         id,
         content,
         user_id,
-        profiles!messages_profile_fkey (
+        profiles:profiles!messages_profile_fkey (
           username,
           avatar_url
         )
@@ -53,16 +54,21 @@ function App() {
     setLoading(false);
   }
 
+  // Initialize authentication
   useEffect(() => {
     let active = true;
 
     supabase.auth.getUser().then(({ data }) => {
-      if (active) setUser(data.user);
+      if (active) {
+        setUser(data.user);
+      }
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
-        if (active) setUser(session?.user ?? null);
+        if (active) {
+          setUser(session?.user ?? null);
+        }
       },
     );
 
@@ -74,6 +80,7 @@ function App() {
     };
   }, []);
 
+  // GitHub OAuth login
   async function signIn() {
     setError(null);
 
@@ -84,15 +91,23 @@ function App() {
       options: { redirectTo },
     });
 
-    if (error) setError(error.message);
+    if (error) {
+      setError(error.message);
+    }
   }
 
+  // Sign out
   async function signOut() {
+    setError(null);
+
     const { error } = await supabase.auth.signOut();
 
-    if (error) setError(error.message);
+    if (error) {
+      setError(error.message);
+    }
   }
 
+  // Submit a new message
   async function postMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -117,6 +132,7 @@ function App() {
     setPosting(false);
   }
 
+  // Delete own messages or moderator-delete any message
   async function deleteMessage(message: Message) {
     if (!user || deletingId !== null) return;
 
@@ -124,15 +140,15 @@ function App() {
 
     if (!isOwner && !isModerator) return;
 
-    const confirmation = window.confirm(
+    const author = message.profiles?.[0]?.username ?? "Guest";
+
+    const confirmed = window.confirm(
       isOwner
         ? "Delete your message?"
-        : `Super Delete this message from ${
-            message.profiles?.username ?? "Guest"
-          }?`,
+        : `Super Delete this message from ${author}?`,
     );
 
-    if (!confirmation) return;
+    if (!confirmed) return;
 
     setDeletingId(message.id);
     setError(null);
@@ -177,7 +193,7 @@ function App() {
             {user.user_metadata.avatar_url && (
               <img
                 src={user.user_metadata.avatar_url}
-                alt=""
+                alt="Your GitHub avatar"
                 width={40}
                 height={40}
                 style={{ borderRadius: "50%" }}
@@ -190,10 +206,14 @@ function App() {
 
             {isModerator && <span>⭐ Moderator</span>}
 
-            <button onClick={signOut}>Sign out</button>
+            <button type="button" onClick={signOut}>
+              Sign out
+            </button>
           </div>
         ) : (
-          <button onClick={signIn}>Sign in with GitHub</button>
+          <button type="button" onClick={signIn}>
+            Sign in with GitHub
+          </button>
         )}
       </header>
 
@@ -246,6 +266,8 @@ function App() {
       ) : (
         <div style={{ display: "grid", gap: 16 }}>
           {messages.map((message) => {
+            const profile = message.profiles?.[0];
+
             const isOwner = Boolean(user && message.user_id === user.id);
 
             const canDelete = isOwner || isModerator;
@@ -267,9 +289,9 @@ function App() {
                     gap: 12,
                   }}
                 >
-                  {message.profiles?.avatar_url && (
+                  {profile?.avatar_url && (
                     <img
-                      src={message.profiles.avatar_url}
+                      src={profile.avatar_url}
                       alt=""
                       width={40}
                       height={40}
@@ -277,7 +299,7 @@ function App() {
                     />
                   )}
 
-                  <strong>{message.profiles?.username ?? "Guest"}</strong>
+                  <strong>{profile?.username ?? "Guest"}</strong>
                 </div>
 
                 <p>{message.content}</p>
