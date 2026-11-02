@@ -12,10 +12,21 @@ type Message = {
   id: number;
   content: string;
   user_id: string | null;
-  profiles: Profile[];
+  profiles: Profile | Profile[] | null;
 };
 
 const MODERATOR_ID = import.meta.env.VITE_MODERATOR_USER_ID;
+
+// Supabase may return a profile object or array.
+function getProfile(message: Message): Profile | null {
+  const profiles = message.profiles;
+
+  if (Array.isArray(profiles)) {
+    return profiles[0] ?? null;
+  }
+
+  return profiles ?? null;
+}
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -28,7 +39,7 @@ function App() {
 
   const isModerator = Boolean(MODERATOR_ID && user?.id === MODERATOR_ID);
 
-  // Load messages and their GitHub profiles
+  // Load messages along with GitHub profiles.
   async function loadMessages() {
     const { data, error } = await supabase
       .from("messages")
@@ -48,13 +59,13 @@ function App() {
     if (error) {
       setError(error.message);
     } else {
-      setMessages(data ?? []);
+      setMessages((data ?? []) as Message[]);
     }
 
     setLoading(false);
   }
 
-  // Initialize authentication
+  // Initialize authentication and messages.
   useEffect(() => {
     let active = true;
 
@@ -80,7 +91,7 @@ function App() {
     };
   }, []);
 
-  // GitHub OAuth login
+  // Sign in using GitHub.
   async function signIn() {
     setError(null);
 
@@ -96,7 +107,7 @@ function App() {
     }
   }
 
-  // Sign out
+  // Sign out.
   async function signOut() {
     setError(null);
 
@@ -107,7 +118,7 @@ function App() {
     }
   }
 
-  // Submit a new message
+  // Post a new message.
   async function postMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -132,7 +143,7 @@ function App() {
     setPosting(false);
   }
 
-  // Delete own messages or moderator-delete any message
+  // Delete a message, enforcing owner/moderator UI rules.
   async function deleteMessage(message: Message) {
     if (!user || deletingId !== null) return;
 
@@ -140,7 +151,8 @@ function App() {
 
     if (!isOwner && !isModerator) return;
 
-    const author = message.profiles?.[0]?.username ?? "Guest";
+    const profile = getProfile(message);
+    const author = profile?.username ?? "Guest";
 
     const confirmed = window.confirm(
       isOwner
@@ -188,6 +200,7 @@ function App() {
               display: "flex",
               alignItems: "center",
               gap: 12,
+              flexWrap: "wrap",
             }}
           >
             {user.user_metadata.avatar_url && (
@@ -266,7 +279,7 @@ function App() {
       ) : (
         <div style={{ display: "grid", gap: 16 }}>
           {messages.map((message) => {
-            const profile = message.profiles?.[0];
+            const profile = getProfile(message);
 
             const isOwner = Boolean(user && message.user_id === user.id);
 
@@ -302,7 +315,7 @@ function App() {
                   <strong>{profile?.username ?? "Guest"}</strong>
                 </div>
 
-                <p>{message.content}</p>
+                <p style={{ whiteSpace: "pre-wrap" }}>{message.content}</p>
 
                 {canDelete && (
                   <button
