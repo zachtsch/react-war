@@ -1,8 +1,8 @@
-import heroImg from "./assets/hero.png";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "./assets/vite.svg";
+// import heroImg from "./assets/hero.png";
+// import reactLogo from "./assets/react.svg";
+// import viteLogo from "./assets/vite.svg";
 import "./App.css";
-import { CardImage, type Card } from "./Card";
+// import { CardImage, type Card } from "./Card";
 import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
 
@@ -48,14 +48,14 @@ function App() {
 }
 
 export default App;
-const card: Card = { rank: "A", suit: "S" };
+// const card: Card = { rank: "A", suit: "S" };
 
-function App2() {
-  const [count, setCount] = useState(0);
+// function App2() {
+//   const [count, setCount] = useState(0);
 
-  return (
-    <>
-      <CardImage card={card} width={120} />
-    </>
-  );
-}
+//   return (
+//     <>
+//       <CardImage card={card} width={120} />
+//     </>
+//   );
+// }
